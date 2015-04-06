@@ -1,6 +1,12 @@
 package upem.jarret.worker;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
@@ -95,9 +101,30 @@ public class ClientTask {
 		return new ClientTask(jobId, workerVersion, workerURL, workerClassName, task);
 	}
 
-	public void doWork() {
-		
+	public void doWork() throws InvocationTargetException {
+		try{
+			URLClassLoader urlClassLoader = new URLClassLoader(new URL[]{new URL(workerURL)});
+			Class<? extends Object> workerClass = urlClassLoader.loadClass(workerClassName);
+			Object workerObj =  workerClass.newInstance();
+			
+			Method method = workerClass.getDeclaredMethod("compute", int.class);
+			String result = (String) method.invoke(workerObj, task);
+			urlClassLoader.close();
+		}catch (ClassNotFoundException e) {
+			e.printStackTrace();
+		} catch (InstantiationException e) {
+			e.printStackTrace();
+		} catch (IllegalAccessException e) {
+			e.printStackTrace();
+		} catch (NoSuchMethodException e) {
+			e.printStackTrace();
+		} catch (SecurityException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
+	
 	
 
 }

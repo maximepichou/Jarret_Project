@@ -1,6 +1,7 @@
 package upem.jarret.worker;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
@@ -34,7 +35,6 @@ public class ClientJarret {
 	public ByteBuffer getRequestPacket(){
 		buff = ByteBuffer.allocate(BUFFER_SIZE);
 		String request = "GET Task HTTP/1.1\r\n" + "Host: "+serverAddress.getHostString() + "\r\n" + "\r\n";
-		System.out.println(request);
 		buff.put(ASCII_CHARSET.encode(request));
 		return buff;
 	}
@@ -42,6 +42,7 @@ public class ClientJarret {
 	public void sendPacket(ByteBuffer buff) throws IOException{
     	buff.flip();
     	sc.write(buff);
+    	
     	buff.clear();
 	}
 	
@@ -55,6 +56,7 @@ public class ClientJarret {
 		String clientID = args[0];
 		String adress = args[1];
 		int port = Integer.valueOf(args[2]);
+
 		while(true){
 			ClientJarret cJarret = new ClientJarret(clientID, adress, port);
 			cJarret.sendPacket(cJarret.getRequestPacket());
@@ -74,10 +76,14 @@ public class ClientJarret {
 						//Do nothing
 					}
 				}
+				continue;
 			}
-			else{
-				cTask.doWork();
-			}
+				try {
+					cTask.doWork();
+				} catch (InvocationTargetException e) {
+					e.printStackTrace();
+				}
+			
 		}
 		
 		
