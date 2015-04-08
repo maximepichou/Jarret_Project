@@ -6,7 +6,6 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.Charset;
-import java.util.LinkedList;
 
 //http://www.journaldev.com/2324/jackson-json-processing-api-in-java-example-tutorial
 //http://repo1.maven.org/maven2/com/fasterxml/jackson/
@@ -35,9 +34,10 @@ public class ClientJarret {
 
 	public ByteBuffer getRequestPacket() {
 		buff = ByteBuffer.allocate(BUFFER_SIZE);
+		String request2 = "GET / HTTP/1.1\r\n" + "Host: www.w3.org\r\n" + "\r\n";
 		String request = "GET Task HTTP/1.1\r\n" + "Host: "
 				+ serverAddress.getHostString() + "\r\n" + "\r\n";
-		buff.put(ASCII_CHARSET.encode(request));
+		buff.put(ASCII_CHARSET.encode(request2));
 		return buff;
 	}
 
@@ -46,6 +46,11 @@ public class ClientJarret {
 		sc.write(buff);
 
 		buff.clear();
+	}
+	
+	public void writeAnswerHTTP(String response){
+		
+		
 	}
 
 	public static void main(String[] args) throws IOException {
@@ -63,9 +68,9 @@ public class ClientJarret {
 			HTTPReader reader = new HTTPReader(cJarret.sc, cJarret.buff);
 			HTTPHeader header = reader.readHeader();
 			System.out.println(header.getFields());
-			cJarret.buff.clear();
-			cJarret.buff = reader.readBytes(header.getContentLength());
-			ClientTask cTask = ClientTask.create(cJarret.buff, header);
+			ByteBuffer content = reader.readBytes(header.getContentLength());
+			System.out.println(header.getCharset().decode(cJarret.buff));
+			ClientTask cTask = ClientTask.create(content, header);
 			int sleep;
 			if ((sleep = cTask.haveToSleep()) != 0) {
 				long timeSlept = System.currentTimeMillis();
@@ -81,7 +86,7 @@ public class ClientJarret {
 			}
 
 			try {
-				String result = cTask.doWork();
+				cTask.doWork();
 			} catch (ClassNotFoundException | IllegalAccessException
 					| InstantiationException e) {
 				System.err.println("Error while loading URL class");

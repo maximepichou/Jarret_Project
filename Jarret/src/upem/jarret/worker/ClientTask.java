@@ -1,12 +1,8 @@
 package upem.jarret.worker;
 
 import java.io.IOException;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
@@ -20,6 +16,7 @@ public class ClientTask {
 	private String workerURL;
 	private String workerClassName;
 	private int task;
+	private String result;
 	private int secondsToSleep;
 
 	public ClientTask(long jobId, String workerVersion, String workerURL,
@@ -51,7 +48,7 @@ public class ClientTask {
 
 	public static ClientTask create(ByteBuffer buff, HTTPHeader header) {
 		if (!"application/json".equals(header.getContentType())) {
-			throw new IllegalArgumentException();
+			throw new IllegalArgumentException("This is not JSON Content-Type");
 		}
 		String content = header.getCharset().decode(buff).toString();
 		JsonFactory jfactory = new JsonFactory();
@@ -104,12 +101,21 @@ public class ClientTask {
 				task);
 	}
 
-	public String doWork() throws InvocationTargetException,
+	public void doWork() throws InvocationTargetException,
 			MalformedURLException, ClassNotFoundException,
 			IllegalAccessException, InstantiationException {
 		Worker worker = WorkerFactory.getWorker(workerURL, workerClassName);
-		return worker.compute(task);
-
+		result = worker.compute(task);
+	}
+	
+	public void checkResult(){
+		JsonFactory jfactory = new JsonFactory();
+		try {
+			JsonParser jParser = jfactory.createParser(result);
+			
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 }
