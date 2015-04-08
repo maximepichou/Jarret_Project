@@ -21,12 +21,13 @@ public class ClientTask {
 	private String workerClassName;
 	private int task;
 	private int secondsToSleep;
-	
-	public ClientTask(long jobId, String workerVersion, String workerURL, String workerClassName, int task) {
-		if(jobId < 0){
-			throw new IllegalArgumentException("JobId is not valid"); 
+
+	public ClientTask(long jobId, String workerVersion, String workerURL,
+			String workerClassName, int task) {
+		if (jobId < 0) {
+			throw new IllegalArgumentException("JobId is not valid");
 		}
-		if(task < 0){
+		if (task < 0) {
 			throw new IllegalArgumentException("task is not valid");
 		}
 		this.jobId = jobId;
@@ -36,20 +37,20 @@ public class ClientTask {
 		this.task = task;
 		secondsToSleep = 0;
 	}
-	
+
 	public ClientTask(int secondsToSleep) {
-		if(secondsToSleep <= 0){
+		if (secondsToSleep <= 0) {
 			throw new IllegalArgumentException();
 		}
 		this.secondsToSleep = secondsToSleep;
 	}
-	
-	public int haveToSleep(){
+
+	public int haveToSleep() {
 		return secondsToSleep;
 	}
 
 	public static ClientTask create(ByteBuffer buff, HTTPHeader header) {
-		if(!"application/json".equals(header.getContentType())){
+		if (!"application/json".equals(header.getContentType())) {
 			throw new IllegalArgumentException();
 		}
 		String content = header.getCharset().decode(buff).toString();
@@ -63,9 +64,9 @@ public class ClientTask {
 			JsonParser jParser = jfactory.createParser(content);
 			// loop until token equal to "}"
 			while (jParser.nextToken() != JsonToken.END_OBJECT) {
-		 
+
 				String fieldname = jParser.getCurrentName();
-				switch(fieldname){
+				switch (fieldname) {
 				case "JobId":
 					jParser.nextToken();
 					jobId = Long.valueOf(jParser.getText());
@@ -88,43 +89,27 @@ public class ClientTask {
 					break;
 				case "ComeBackInSeconds":
 					return new ClientTask(jParser.getIntValue());
-					
+
 				}
-			  }
-			  jParser.close();
-			  
+			}
+			jParser.close();
+
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		if(jobId == -1 || task == -1|| workerVersion.equals("") || workerURL.equals("") || workerURL.equals(""))
+		if (jobId == -1 || task == -1 || workerVersion.equals("")
+				|| workerURL.equals("") || workerURL.equals(""))
 			throw new IllegalStateException();
-		return new ClientTask(jobId, workerVersion, workerURL, workerClassName, task);
+		return new ClientTask(jobId, workerVersion, workerURL, workerClassName,
+				task);
 	}
 
-	public void doWork() throws InvocationTargetException {
-		try{
-			URLClassLoader urlClassLoader = new URLClassLoader(new URL[]{new URL(workerURL)});
-			Class<? extends Object> workerClass = urlClassLoader.loadClass(workerClassName);
-			Object workerObj =  workerClass.newInstance();
-			
-			Method method = workerClass.getDeclaredMethod("compute", int.class);
-			String result = (String) method.invoke(workerObj, task);
-			urlClassLoader.close();
-		}catch (ClassNotFoundException e) {
-			e.printStackTrace();
-		} catch (InstantiationException e) {
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
-		} catch (NoSuchMethodException e) {
-			e.printStackTrace();
-		} catch (SecurityException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+	public String doWork() throws InvocationTargetException,
+			MalformedURLException, ClassNotFoundException,
+			IllegalAccessException, InstantiationException {
+		Worker worker = WorkerFactory.getWorker(workerURL, workerClassName);
+		return worker.compute(task);
+
 	}
-	
-	
 
 }

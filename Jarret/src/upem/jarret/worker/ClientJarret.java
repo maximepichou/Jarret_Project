@@ -19,11 +19,12 @@ public class ClientJarret {
 	private ByteBuffer buff;
 	public static final Charset ASCII_CHARSET = Charset.forName("ASCII");
 
-	public ClientJarret(String clientID, String adressServer, int portServer) throws IOException {
+	public ClientJarret(String clientID, String adressServer, int portServer)
+			throws IOException {
 		this.clientID = clientID;
 		sc = SocketChannel.open();
 		serverAddress = new InetSocketAddress(adressServer, portServer);
-		//connection to server
+		// connection to server
 		sc.connect(serverAddress);
 	}
 
@@ -31,23 +32,22 @@ public class ClientJarret {
 		System.out.println("ClientJarret clientID Adress Port");
 
 	}
-	
-	public ByteBuffer getRequestPacket(){
+
+	public ByteBuffer getRequestPacket() {
 		buff = ByteBuffer.allocate(BUFFER_SIZE);
-		String request = "GET Task HTTP/1.1\r\n" + "Host: "+serverAddress.getHostString() + "\r\n" + "\r\n";
+		String request = "GET Task HTTP/1.1\r\n" + "Host: "
+				+ serverAddress.getHostString() + "\r\n" + "\r\n";
 		buff.put(ASCII_CHARSET.encode(request));
 		return buff;
 	}
 
-	public void sendPacket(ByteBuffer buff) throws IOException{
-    	buff.flip();
-    	sc.write(buff);
-    	
-    	buff.clear();
+	public void sendPacket(ByteBuffer buff) throws IOException {
+		buff.flip();
+		sc.write(buff);
+
+		buff.clear();
 	}
-	
-	
-	
+
 	public static void main(String[] args) throws IOException {
 		if (args.length != 3) {
 			usage();
@@ -57,7 +57,7 @@ public class ClientJarret {
 		String adress = args[1];
 		int port = Integer.valueOf(args[2]);
 
-		while(true){
+		while (true) {
 			ClientJarret cJarret = new ClientJarret(clientID, adress, port);
 			cJarret.sendPacket(cJarret.getRequestPacket());
 			HTTPReader reader = new HTTPReader(cJarret.sc, cJarret.buff);
@@ -67,27 +67,31 @@ public class ClientJarret {
 			cJarret.buff = reader.readBytes(header.getContentLength());
 			ClientTask cTask = ClientTask.create(cJarret.buff, header);
 			int sleep;
-			if((sleep = cTask.haveToSleep()) != 0){
+			if ((sleep = cTask.haveToSleep()) != 0) {
 				long timeSlept = System.currentTimeMillis();
-				while(System.currentTimeMillis() - timeSlept < sleep*1000){
+				while (System.currentTimeMillis() - timeSlept < sleep * 1000) {
 					try {
-						Thread.sleep(sleep * 1000 - (System.currentTimeMillis() - timeSlept));
+						Thread.sleep(sleep * 1000
+								- (System.currentTimeMillis() - timeSlept));
 					} catch (InterruptedException e) {
-						//Do nothing
+						// Do nothing
 					}
 				}
 				continue;
 			}
-				try {
-					cTask.doWork();
-				} catch (InvocationTargetException e) {
-					e.printStackTrace();
-				}
-			
+
+			try {
+				String result = cTask.doWork();
+			} catch (ClassNotFoundException | IllegalAccessException
+					| InstantiationException e) {
+				System.err.println("Error while loading URL class");
+				e.printStackTrace();
+			} catch (InvocationTargetException e) {
+
+				e.printStackTrace();
+			}
 		}
-		
-		
-		
+
 	}
 
 }

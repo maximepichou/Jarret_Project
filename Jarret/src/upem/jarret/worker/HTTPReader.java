@@ -31,20 +31,19 @@ public class HTTPReader {
 	 *             be read
 	 */
 	public String readLineCRLF() throws IOException {
-		
+
 		StringBuilder sb = new StringBuilder();
 		boolean justReadCR = false;
 		boolean finished = false;
-		while(true){
+		while (true) {
 			buff.flip();
-			/*if(!buff.hasRemaining()){
-				buff.compact();
-				sc.read(buff);
-				buff.flip();
-			}*/
-			while(buff.hasRemaining() && !finished){
+			/*
+			 * if(!buff.hasRemaining()){ buff.compact(); sc.read(buff);
+			 * buff.flip(); }
+			 */
+			while (buff.hasRemaining() && !finished) {
 				byte current = buff.get();
-				if(current == LF && justReadCR){
+				if (current == LF && justReadCR) {
 					finished = true;
 				}
 				justReadCR = (current == CR);
@@ -53,17 +52,17 @@ public class HTTPReader {
 			tmp.flip();
 			sb.append(ASCII_CHARSET.decode(tmp));
 			buff.compact();
-			if(finished){
+			if (finished) {
 				break;
 			}
-			if(sc.read(buff) == -1){
-				//throw new IOException("Connection close before reading");
+			if (sc.read(buff) == -1) {
+				// throw new IOException("Connection close before reading");
 				HTTPException.ensure(false, "Connection close before reading");
 			}
 		}
-		sb.delete(sb.length()-2, sb.length());
+		sb.delete(sb.length() - 2, sb.length());
 		return sb.toString();
-		
+
 	}
 
 	/**
@@ -75,16 +74,18 @@ public class HTTPReader {
 	public HTTPHeader readHeader() throws IOException {
 		String statusLine = readLineCRLF();
 		HashMap<String, String> map = new HashMap<>();
-		
-		while(true){
+
+		while (true) {
 			String line = readLineCRLF();
-			if(line.length() == 0){
+			if (line.length() == 0) {
 				break;
 			}
 			int index_of_separator = line.indexOf(":");
 			String s;
-			if(null != (s = map.putIfAbsent(line.substring(0, index_of_separator), line.substring(index_of_separator+2)))){
-				s.concat("; "+line);
+			if (null != (s = map.putIfAbsent(
+					line.substring(0, index_of_separator),
+					line.substring(index_of_separator + 2)))) {
+				s.concat("; " + line);
 				map.put(statusLine, s);
 			}
 		}
@@ -100,27 +101,29 @@ public class HTTPReader {
 	 *             could be read
 	 */
 	public ByteBuffer readBytes(int size) throws IOException {
-		if(size <= 0){
-			throw new IllegalArgumentException("Negative size of content-length");
+		if (size <= 0) {
+			throw new IllegalArgumentException(
+					"Negative size of content-length");
 		}
 		ByteBuffer bb = ByteBuffer.allocate(size);
 		buff.flip();
-		if(buff.remaining() > size){
+		if (buff.remaining() > size) {
 			int old_limit = buff.limit();
-			buff.limit(buff.position()+bb.remaining());
+			buff.limit(buff.position() + bb.remaining());
 			bb.put(buff);
 			buff.limit(old_limit);
 			buff.compact();
-		}else{
+		} else {
 			bb.put(buff);
 			buff.compact();
-			while(bb.hasRemaining()){
-				if(-1 == sc.read(bb)){
-					HTTPException.ensure(false, "Connection close before reading");
+			while (bb.hasRemaining()) {
+				if (-1 == sc.read(bb)) {
+					HTTPException.ensure(false,
+							"Connection close before reading");
 				}
 			}
 		}
-		
+
 		return bb;
 	}
 
@@ -137,13 +140,12 @@ public class HTTPReader {
 		System.out.println(reader.readLineCRLF());
 		sc.close();
 
-		/*bb = ByteBuffer.allocate(50);
-		sc = SocketChannel.open();
-		sc.connect(new InetSocketAddress("www.w3.org", 80));
-		reader = new HTTPReader(sc, bb);
-		sc.write(charsetASCII.encode(request));
-		System.out.println(reader.readHeader());
-		sc.close();*/
+		/*
+		 * bb = ByteBuffer.allocate(50); sc = SocketChannel.open();
+		 * sc.connect(new InetSocketAddress("www.w3.org", 80)); reader = new
+		 * HTTPReader(sc, bb); sc.write(charsetASCII.encode(request));
+		 * System.out.println(reader.readHeader()); sc.close();
+		 */
 
 		bb = ByteBuffer.allocate(50);
 		sc = SocketChannel.open();
@@ -157,17 +159,14 @@ public class HTTPReader {
 		System.out.println(header.getCharset().decode(content));
 		sc.close();
 
-		/*bb = ByteBuffer.allocate(50);
-		request = "GET / HTTP/1.1\r\n" + "Host: www.u-pem.fr\r\n" + "\r\n";
-		sc = SocketChannel.open();
-		sc.connect(new InetSocketAddress("www.u-pem.fr", 80));
-		reader = new HTTPReader(sc, bb);
-		sc.write(charsetASCII.encode(request));
-		header = reader.readHeader();
-		System.out.println(header);
-		content = reader.readChunks();
-		content.flip();
-		System.out.println(header.getCharset().decode(content));
-		sc.close();*/
+		/*
+		 * bb = ByteBuffer.allocate(50); request = "GET / HTTP/1.1\r\n" +
+		 * "Host: www.u-pem.fr\r\n" + "\r\n"; sc = SocketChannel.open();
+		 * sc.connect(new InetSocketAddress("www.u-pem.fr", 80)); reader = new
+		 * HTTPReader(sc, bb); sc.write(charsetASCII.encode(request)); header =
+		 * reader.readHeader(); System.out.println(header); content =
+		 * reader.readChunks(); content.flip();
+		 * System.out.println(header.getCharset().decode(content)); sc.close();
+		 */
 	}
 }
