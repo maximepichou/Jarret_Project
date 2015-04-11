@@ -6,21 +6,24 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.Charset;
+import java.util.HashMap;
+import java.util.Map;
 
 //http://www.journaldev.com/2324/jackson-json-processing-api-in-java-example-tutorial
 //http://repo1.maven.org/maven2/com/fasterxml/jackson/
 //http://docs.oracle.com/javase/7/docs/api/java/net/URLClassLoader.html#URLClassLoader(java.net.URL[],%20java.lang.ClassLoader)
 public class ClientJarret {
-	private final String clientID;
+	private final String clientId;
 	private InetSocketAddress serverAddress;
 	private final SocketChannel sc;
 	private static final int BUFFER_SIZE = 4096;
 	private ByteBuffer buff;
 	public static final Charset ASCII_CHARSET = Charset.forName("ASCII");
+	public static final Charset UTF8_CHARSET = Charset.forName("UTF-8");
 
 	public ClientJarret(String clientID, String adressServer, int portServer)
 			throws IOException {
-		this.clientID = clientID;
+		this.clientId = clientID;
 		sc = SocketChannel.open();
 		serverAddress = new InetSocketAddress(adressServer, portServer);
 		// connection to server
@@ -92,11 +95,27 @@ public class ClientJarret {
 				System.err.println("Error while loading URL class");
 				e.printStackTrace();
 			} catch (InvocationTargetException e) {
-
 				e.printStackTrace();
 			}
+			ByteBuffer buff = cJarret.createAnswerPacket(cTask);
+			buff.flip();
+			cJarret.sc.write(buff);
 		}
 
+	}
+
+	private ByteBuffer createAnswerPacket(ClientTask cTask) throws HTTPException {
+		Map<String,String> fields = new HashMap<>();
+		String response = "POST Answer HTTP/1.1";
+		fields.put("Host", serverAddress.getHostString());
+		fields.put("Content-Type", "application/json");
+		fields.put("Content-Length", String.valueOf(84+serverAddress.getHostString().length()));
+		HTTPHeader postHeader = HTTPHeader.create(response, fields);
+		ByteBuffer buff = ByteBuffer.allocate(BUFFER_SIZE);
+		buff.put(ASCII_CHARSET.encode(postHeader.toString()));
+		buff.put(UTF8_CHARSET.encode(cTask.convertToJSON(clientId)));
+		return buff;
+		
 	}
 
 }

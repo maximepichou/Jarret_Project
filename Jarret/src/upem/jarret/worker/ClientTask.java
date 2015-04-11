@@ -82,7 +82,7 @@ public class ClientTask {
 					break;
 				case "Task":
 					jParser.nextToken();
-					task = jParser.getIntValue();
+					task = Integer.valueOf(jParser.getText());
 					break;
 				case "ComeBackInSeconds":
 					return new ClientTask(jParser.getIntValue());
@@ -108,7 +108,7 @@ public class ClientTask {
 		result = worker.compute(task);
 	}
 	
-	public void checkResult(){
+	/*public void checkResult(){
 		JsonFactory jfactory = new JsonFactory();
 		try {
 			JsonParser jParser = jfactory.createParser(result);
@@ -116,6 +116,20 @@ public class ClientTask {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}*/
+	
+	public String convertToJSON(String clientId){
+		StringBuilder sb = new StringBuilder();
+		sb.append("{\n");
+		sb.append("\"JobId\": \""+jobId+"\",\n");
+		sb.append("\"WorkerURL\": \""+workerURL+"\",\n");
+		sb.append("\"WorkerClassName\": \""+workerClassName+"\",\n");
+		sb.append("\"Task\": \""+task+"\",\n");
+		sb.append("\"ClientId\": \""+clientId+"\",\n");
+		sb.append("\"Answer\": \""+result+"\",\n");
+		sb.append("\"JobId\": \""+jobId+"\",\n");
+		sb.append("}\n");
+		return sb.toString();
 	}
 
 }

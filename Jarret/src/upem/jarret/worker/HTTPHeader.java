@@ -134,8 +134,11 @@ public class HTTPHeader {
 	}
 
 	public String toString() {
-		return response + "\n" + version + " " + code + "\n"
-				+ fields.toString();
+		StringBuilder sb = new StringBuilder();
+		sb.append(response + "\r\n" + version + " " + code + "\r\n");
+		fields.forEach((k,v)-> sb.append(k + ": "+v+"\r\n"));
+		sb.append("\r\n");
+		return sb.toString();
 	}
 
 }
