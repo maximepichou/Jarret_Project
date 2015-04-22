@@ -12,5 +12,11 @@
 			<attribute name="javadoc_location" value="jar:file:/home/2inf1a/mpichou/workspace-light/Jarret/jackson-databind-2.5.2-javadoc.jar!/"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
+	<classpathentry kind="lib" path="jackson-annotations-2.5.2.jar" sourcepath="jackson-annotations-2.5.2-sources.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/home/maxime/git/Jarret_Project/Jarret/jackson-annotations-2.5.2-javadoc.jar!/"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

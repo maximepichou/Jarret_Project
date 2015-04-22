@@ -4,6 +4,8 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 
+import upem.jarret.worker.Worker;
+
 public class WorkerFactory {
 
 	/**
@@ -27,12 +29,15 @@ public class WorkerFactory {
 			throws MalformedURLException, ClassNotFoundException,
 			IllegalAccessException, InstantiationException {
 		URL urls[] = { new URL("jar", "", url + "!/") };
+		System.out.println("test1");
 		URLClassLoader urlClassLoader = new URLClassLoader(urls, Thread
 				.currentThread().getContextClassLoader());
+		System.out.println("test2");
 		Class<? extends Object> theClass = Class.forName(className, true,
 				urlClassLoader);
+		System.out.println("test3");
 		theClass.newInstance();
-		return (Worker) theClass.newInstance();
+		return (upem.jarret.worker.Worker) theClass.newInstance();
 
 	}
 }

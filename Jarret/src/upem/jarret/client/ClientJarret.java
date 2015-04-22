@@ -40,7 +40,7 @@ public class ClientJarret {
 		String request2 = "GET / HTTP/1.1\r\n" + "Host: www.w3.org\r\n" + "\r\n";
 		String request = "GET Task HTTP/1.1\r\n" + "Host: "
 				+ serverAddress.getHostString() + "\r\n" + "\r\n";
-		buff.put(ASCII_CHARSET.encode(request2));
+		buff.put(ASCII_CHARSET.encode(request));
 		return buff;
 	}
 
@@ -66,14 +66,18 @@ public class ClientJarret {
 		int port = Integer.valueOf(args[2]);
 
 		while (true) {
+			System.out.println("Initialisation du client " + clientID+ "\nConnexion au server " + adress+" sur le port "+port);
 			ClientJarret cJarret = new ClientJarret(clientID, adress, port);
+			System.out.println("Envoie du paquet de demande de tâche");
 			cJarret.sendPacket(cJarret.getRequestPacket());
+			System.out.println("Lecture de la réponse du serveur");
 			HTTPReader reader = new HTTPReader(cJarret.sc, cJarret.buff);
+			System.out.println("Lecture de l'entete HTTP");
 			HTTPHeader header = reader.readHeader();
 			System.out.println(header.getFields());
 			ByteBuffer content = reader.readBytes(header.getContentLength());
-			System.out.println(header.getCharset().decode(cJarret.buff));
-			ClientTask cTask = ClientTask.create(content, header);
+			//System.out.println(header.getCharset().decode(cJarret.buff));
+			ClientTask cTask = ClientTask.create(cJarret.buff, header);
 			int sleep;
 			if ((sleep = cTask.haveToSleep()) != 0) {
 				long timeSlept = System.currentTimeMillis();
@@ -89,6 +93,7 @@ public class ClientJarret {
 			}
 
 			try {
+				System.out.println("Doing Work");
 				cTask.doWork();
 			} catch (ClassNotFoundException | IllegalAccessException
 					| InstantiationException e) {
@@ -97,8 +102,10 @@ public class ClientJarret {
 			} catch (InvocationTargetException e) {
 				e.printStackTrace();
 			}
+			System.out.println("Creating AnswerPacket");
 			ByteBuffer buff = cJarret.createAnswerPacket(cTask);
 			buff.flip();
+			System.out.println("Sending Packet");
 			cJarret.sc.write(buff);
 		}
 

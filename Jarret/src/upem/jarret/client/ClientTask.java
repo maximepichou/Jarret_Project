@@ -6,6 +6,8 @@ import java.net.MalformedURLException;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
+import upem.jarret.worker.Worker;
+
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
@@ -51,6 +53,7 @@ public class ClientTask {
 			throw new IllegalArgumentException("This is not JSON Content-Type");
 		}
 		String content = header.getCharset().decode(buff).toString();
+		System.out.println(content);
 		JsonFactory jfactory = new JsonFactory();
 		long jobId = -1;
 		String workerVersion = "";
@@ -59,10 +62,14 @@ public class ClientTask {
 		int task = -1;
 		try {
 			JsonParser jParser = jfactory.createParser(content);
+			System.out.println(jParser.nextToken());
 			// loop until token equal to "}"
 			while (jParser.nextToken() != JsonToken.END_OBJECT) {
-
+				
+				
 				String fieldname = jParser.getCurrentName();
+				
+				System.out.println(fieldname);
 				switch (fieldname) {
 				case "JobId":
 					jParser.nextToken();
@@ -105,7 +112,9 @@ public class ClientTask {
 			MalformedURLException, ClassNotFoundException,
 			IllegalAccessException, InstantiationException {
 		Worker worker = WorkerFactory.getWorker(workerURL, workerClassName);
+		System.out.println("Computing");
 		result = worker.compute(task);
+		System.out.println("Computed");
 	}
 	
 	/*public void checkResult(){
