@@ -1,64 +1,82 @@
 package upem.jarret.server;
 
-import java.io.File;
+import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.List;
-import java.util.Scanner;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.introspect.VisibilityChecker;
 
 public class JsonData {
-	private int JobId;
-	private int JobTaskNumber;
+	private String JobId;
+	private String JobTaskNumber;
 	private String JobDescription;
-	private int JobPriority;
-	private int WorkerVersionNumber;
+	private String JobPriority;
+	private String WorkerVersionNumber;
 	private String WorkerURL;
 	private String WorkerClassName;
+
+	public static JsonData create() throws IOException {
+		FileInputStream fstream = new FileInputStream("workerdescription.json");
+		// or using Scaner
+		DataInputStream in = new DataInputStream(fstream);
+		BufferedReader br = new BufferedReader(new InputStreamReader(in));
+		String strLine;
+		StringBuilder sb = new StringBuilder();
+		ArrayList<String> strings = new ArrayList<>();
+		// Read File Line By Line
+		while ((strLine = br.readLine()) != null) {
+			sb.append(strLine);
+			System.out.println("Ligne = " + strLine);
+			if (strLine.equals("")) {
+				strLine = sb.toString();
+				strings.add(strLine);
+				sb = new StringBuilder();
+			}
+		}
+		strLine = sb.toString();
+		strings.add(strLine);
+		br.close();
+
+		// create ObjectMapper instance
+		ObjectMapper objectMapper = new ObjectMapper();
+		objectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+		objectMapper.setVisibilityChecker(VisibilityChecker.Std
+				.defaultInstance().withFieldVisibility(
+						JsonAutoDetect.Visibility.ANY));
+		ArrayList<JsonData> jDatas = new ArrayList<JsonData>();
+		// convert json string to object
+		for (String s : strings) {
+			jDatas.add(objectMapper.readValue(s, JsonData.class));
+		}
+		jDatas.stream().forEach(jd -> System.out.println(jd + "\n"));
+		return jDatas.get(0);
+	}
 	
-	public static JsonData create() throws JsonParseException, IOException{
-		JsonFactory jfactory = new JsonFactory();
+	public String giveJobByPriority(){
 		
-		 //read json file data to String
-		ArrayList<Integer> integers = new ArrayList<>();
-       
-        /*List<String> strings = Files.readAllLines(Paths.get("JarRetJobs.json"));
-        for(int i = 0; i < strings.size(); i++){
-        	if(strings.get(i).equals("}")){
-        		integers.add(i);
-        	}
-        }*/
-        
-        //create ObjectMapper instance
-        
-        Scanner sc = null;
-        ArrayList<StringBuilder> strings = new ArrayList<>();
-        int i = 0;
-            try {
-            	sc = new Scanner(new File("JarRetJobs.json"));
-                while (sc.hasNextLine()) {
-                    for (char c : sc.next().toCharArray()) {
-                    	strings.add(new StringBuilder());
-                        if(c == '}'){
-                        	i++;
-                        } 
-                    }
-                }
-            } finally {
-                if (sc != null)
-                    sc.close();
-            }
-            strings.stream().forEach(s->System.out.println(s.toString()));
- 
-       
-        //convert json string to object
-        return null;
+		StringBuilder sb = new StringBuilder();
+		sb.append("{\n");
+		sb.append("\"JobId\": \""+JobId+"\",\n");
+		sb.append("\"WorkerVersion\": \""+WorkerVersionNumber+"\",\n");
+		sb.append("\"WorkerURL\": \""+WorkerURL+"\",\n");
+		sb.append("\"WorkerClassName\": \""+WorkerClassName+"\",\n");
+		sb.append("\"Task\": \""+JobTaskNumber+"\",\n");
+		return sb.toString();
+	}
+
+	@Override
+	public String toString() {
+		return "JobId : " + JobId + "\nJobTaskNumber : " + JobTaskNumber
+				+ "\nJobDescription : " + JobDescription + "\nJobPriority : "
+				+ JobPriority + "\nWorkerVersionNumber : "
+				+ WorkerVersionNumber + "\nWorkerURL : " + WorkerURL
+				+ "\nWorkerClassName : " + WorkerClassName;
 	}
 
 }
