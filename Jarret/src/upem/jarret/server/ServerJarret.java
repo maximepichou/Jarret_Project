@@ -74,7 +74,8 @@ public class ServerJarret {
 	}
 
 	public static void main(String[] args) throws IOException {
-		JsonData.create();
+		TaskGiver tg = TaskGiver.create();
+		System.out.println(tg.giveJobByPriority());
 		//new ServerJarret(Integer.parseInt(args[0])).launch();
 
 	}

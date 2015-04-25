@@ -43,17 +43,16 @@ public class HTTPHeader {
 		if(!version.contains("HTTP")){
 			version = tokens[2];
 		}
-		System.out.println(version);
 		ensure(HTTPHeader.SUPPORTED_VERSIONS.contains(version),
 				"Unsupported version in response:\n" + response);
 		int code = 0;
-		/*try {
+		try {
 			code = Integer.valueOf(tokens[1]);
 			ensure(code >= 100 && code < 600, "Invalid code in response:\n"
 					+ response);
 		} catch (NumberFormatException e) {
-			ensure(false, "Invalid response:\n" + response);
-		}*/
+			//ensure(false, "Invalid response:\n" + response);
+		}
 		Map<String, String> fieldsCopied = new HashMap<>();
 		for (String s : fields.keySet())
 			fieldsCopied.put(s, fields.get(s).trim());
@@ -139,7 +138,7 @@ public class HTTPHeader {
 
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
-		sb.append(response + "\r\n" + version + " " + code + "\r\n");
+		sb.append(response + "\r\n");
 		fields.forEach((k,v)-> sb.append(k + ": "+v+"\r\n"));
 		sb.append("\r\n");
 		return sb.toString();

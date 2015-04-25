@@ -29,13 +29,11 @@ public class WorkerFactory {
 			throws MalformedURLException, ClassNotFoundException,
 			IllegalAccessException, InstantiationException {
 		URL urls[] = { new URL("jar", "", url + "!/") };
-		System.out.println("test1");
 		URLClassLoader urlClassLoader = new URLClassLoader(urls, Thread
 				.currentThread().getContextClassLoader());
-		System.out.println("test2");
 		Class<? extends Object> theClass = Class.forName(className, true,
 				urlClassLoader);
-		System.out.println("test3");
+		System.out.println("Instanciation de la classe");
 		theClass.newInstance();
 		return (upem.jarret.worker.Worker) theClass.newInstance();
 

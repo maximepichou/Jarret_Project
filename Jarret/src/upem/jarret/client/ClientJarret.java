@@ -37,7 +37,8 @@ public class ClientJarret {
 
 	public ByteBuffer getRequestPacket() {
 		buff = ByteBuffer.allocate(BUFFER_SIZE);
-		String request2 = "GET / HTTP/1.1\r\n" + "Host: www.w3.org\r\n" + "\r\n";
+		// String request2 = "GET / HTTP/1.1\r\n" + "Host: www.w3.org\r\n" +
+		// "\r\n";
 		String request = "GET Task HTTP/1.1\r\n" + "Host: "
 				+ serverAddress.getHostString() + "\r\n" + "\r\n";
 		buff.put(ASCII_CHARSET.encode(request));
@@ -50,11 +51,6 @@ public class ClientJarret {
 
 		buff.clear();
 	}
-	
-	public void writeAnswerHTTP(String response){
-		
-		
-	}
 
 	public static void main(String[] args) throws IOException {
 		if (args.length != 3) {
@@ -66,20 +62,21 @@ public class ClientJarret {
 		int port = Integer.valueOf(args[2]);
 
 		while (true) {
-			System.out.println("Initialisation du client " + clientID+ "\nConnexion au server " + adress+" sur le port "+port);
+			System.out.println("Initialisation du client " + clientID
+					+ "\nConnexion au server " + adress + " sur le port "
+					+ port);
 			ClientJarret cJarret = new ClientJarret(clientID, adress, port);
 			System.out.println("Envoie du paquet de demande de tâche");
 			cJarret.sendPacket(cJarret.getRequestPacket());
 			System.out.println("Lecture de la réponse du serveur");
 			HTTPReader reader = new HTTPReader(cJarret.sc, cJarret.buff);
-			System.out.println("Lecture de l'entete HTTP");
 			HTTPHeader header = reader.readHeader();
 			System.out.println(header.getFields());
-			ByteBuffer content = reader.readBytes(header.getContentLength());
-			//System.out.println(header.getCharset().decode(cJarret.buff));
+			reader.readBytes(header.getContentLength());
 			ClientTask cTask = ClientTask.create(cJarret.buff, header);
 			int sleep;
 			if ((sleep = cTask.haveToSleep()) != 0) {
+				System.out.println("Mise en attente pendant : "+ cTask.haveToSleep());
 				long timeSlept = System.currentTimeMillis();
 				while (System.currentTimeMillis() - timeSlept < sleep * 1000) {
 					try {
@@ -93,7 +90,6 @@ public class ClientJarret {
 			}
 
 			try {
-				System.out.println("Doing Work");
 				cTask.doWork();
 			} catch (ClassNotFoundException | IllegalAccessException
 					| InstantiationException e) {
@@ -102,27 +98,33 @@ public class ClientJarret {
 			} catch (InvocationTargetException e) {
 				e.printStackTrace();
 			}
-			System.out.println("Creating AnswerPacket");
+			System.out.println("Sending Packet Answer");
 			ByteBuffer buff = cJarret.createAnswerPacket(cTask);
 			buff.flip();
-			System.out.println("Sending Packet");
 			cJarret.sc.write(buff);
+			cJarret.buff.clear();
+			reader = new HTTPReader(cJarret.sc, cJarret.buff);
+			header = reader.readHeader();
+			System.err.println(header.getCode());
 		}
 
 	}
 
-	private ByteBuffer createAnswerPacket(ClientTask cTask) throws HTTPException {
-		Map<String,String> fields = new HashMap<>();
+	private ByteBuffer createAnswerPacket(ClientTask cTask)
+			throws HTTPException {
+		Map<String, String> fields = new HashMap<>();
 		String response = "POST Answer HTTP/1.1";
 		fields.put("Host", serverAddress.getHostString());
 		fields.put("Content-Type", "application/json");
-		fields.put("Content-Length", String.valueOf(84+serverAddress.getHostString().length()));
+		String jsonAnswer = cTask.convertToJsonString(clientId);
+		fields.put("Content-Length", String.valueOf(jsonAnswer.length()));
 		HTTPHeader postHeader = HTTPHeader.create(response, fields);
 		ByteBuffer buff = ByteBuffer.allocate(BUFFER_SIZE);
+		System.out.println(jsonAnswer);
 		buff.put(ASCII_CHARSET.encode(postHeader.toString()));
-		buff.put(UTF8_CHARSET.encode(cTask.convertToJSON(clientId)));
+		buff.put(UTF8_CHARSET.encode(jsonAnswer));
 		return buff;
-		
+
 	}
 
 }
