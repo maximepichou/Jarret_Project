@@ -23,6 +23,10 @@ public class Task {
 	public boolean taskGiven(){
 		return given;
 	}
+	
+	public void setTaskGiven(){
+		given = true;
+	}
 
 	public String convertToJsonString()  {
 		ObjectMapper mapper = new ObjectMapper();

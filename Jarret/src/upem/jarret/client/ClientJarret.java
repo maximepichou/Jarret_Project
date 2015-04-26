@@ -9,6 +9,9 @@ import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
 
+import fr.upem.net.tcp.http.HTTPHeader;
+import fr.upem.net.tcp.http.HTTPReader;
+
 //http://www.journaldev.com/2324/jackson-json-processing-api-in-java-example-tutorial
 //http://repo1.maven.org/maven2/com/fasterxml/jackson/
 //http://docs.oracle.com/javase/7/docs/api/java/net/URLClassLoader.html#URLClassLoader(java.net.URL[],%20java.lang.ClassLoader)
@@ -45,11 +48,27 @@ public class ClientJarret {
 		return buff;
 	}
 
-	public void sendPacket(ByteBuffer buff) throws IOException {
-		buff.flip();
-		sc.write(buff);
+	public void sendPacket(ByteBuffer buffer) throws IOException {
+		buffer.flip();
+		sc.write(buffer);
+		buffer.clear();
+	}
+	
+	private ByteBuffer createAnswerPacket(ClientTask cTask)
+			throws HTTPException {
+		Map<String, String> fields = new HashMap<>();
+		String response = "POST Answer HTTP/1.1";
+		fields.put("Host", serverAddress.getHostString());
+		fields.put("Content-Type", "application/json; charset=utf-8");
+		String jsonAnswer = cTask.convertToJsonString(clientId);
+		fields.put("Content-Length", String.valueOf(jsonAnswer.length()));
+		HTTPHeader postHeader = HTTPHeader.create(response, fields);
+		ByteBuffer buff = ByteBuffer.allocate(BUFFER_SIZE);
+		System.out.println(jsonAnswer);
+		buff.put(ASCII_CHARSET.encode(postHeader.toString()));
+		buff.put(UTF8_CHARSET.encode(jsonAnswer));
+		return buff;
 
-		buff.clear();
 	}
 
 	public static void main(String[] args) throws IOException {
@@ -100,8 +119,7 @@ public class ClientJarret {
 			}
 			System.out.println("Sending Packet Answer");
 			ByteBuffer buff = cJarret.createAnswerPacket(cTask);
-			buff.flip();
-			cJarret.sc.write(buff);
+			cJarret.sendPacket(buff);
 			cJarret.buff.clear();
 			reader = new HTTPReader(cJarret.sc, cJarret.buff);
 			header = reader.readHeader();
@@ -110,21 +128,6 @@ public class ClientJarret {
 
 	}
 
-	private ByteBuffer createAnswerPacket(ClientTask cTask)
-			throws HTTPException {
-		Map<String, String> fields = new HashMap<>();
-		String response = "POST Answer HTTP/1.1";
-		fields.put("Host", serverAddress.getHostString());
-		fields.put("Content-Type", "application/json");
-		String jsonAnswer = cTask.convertToJsonString(clientId);
-		fields.put("Content-Length", String.valueOf(jsonAnswer.length()));
-		HTTPHeader postHeader = HTTPHeader.create(response, fields);
-		ByteBuffer buff = ByteBuffer.allocate(BUFFER_SIZE);
-		System.out.println(jsonAnswer);
-		buff.put(ASCII_CHARSET.encode(postHeader.toString()));
-		buff.put(UTF8_CHARSET.encode(jsonAnswer));
-		return buff;
-
-	}
+	
 
 }
