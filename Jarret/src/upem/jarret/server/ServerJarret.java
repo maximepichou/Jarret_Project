@@ -13,8 +13,7 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
 
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
 
 import fr.upem.net.tcp.http.HTTPException;
 import fr.upem.net.tcp.http.HTTPHeader;
@@ -29,22 +28,26 @@ public class ServerJarret {
 	private boolean is_shutdown = false;
 	private static final int TIMEOUT = 300;
 	private static Thread thread_server;
-	private TaskGiver tg = TaskGiver.create();
+	private final TaskGiver taskGiver;
+	private final TaskSavior taskSavior;
 	private final Charset ASCII_CHARSET = Charset.forName("ASCII");
 	private final Charset UTF8_CHARSET = Charset.forName("UTF-8");
 
-	public ServerJarret(int port) throws IOException {
+	public ServerJarret(int port, int comeBackInSeconds, String pathJobs)
+			throws IOException {
 		serverSocketChannel = ServerSocketChannel.open();
 		serverSocketChannel.bind(new InetSocketAddress(port));
 		selector = Selector.open();
 		selectedKeys = selector.selectedKeys();
+		taskGiver = TaskGiver.create(comeBackInSeconds);
+		taskSavior = new TaskSavior(pathJobs);
 	}
 
 	public void launch() throws IOException {
 		serverSocketChannel.configureBlocking(false);
 		serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
 		Set<SelectionKey> selectedKeys = selector.selectedKeys();
-		System.out.println("server started");
+		System.out.println("Server started");
 		Object monitor = new Object();
 		while (!Thread.interrupted()) {
 			synchronized (monitor) {
@@ -77,10 +80,10 @@ public class ServerJarret {
 	}
 
 	private void doAccept(SelectionKey key) throws IOException {
-		// only the ServerSocketChannel is register in OP_ACCEPT
 		SocketChannel sc;
 		try {
 			sc = serverSocketChannel.accept();
+			System.out.println("\n\nNew client accepted");
 		} catch (IOException e) {
 			System.err.println("Can't accept Client");
 			return;
@@ -99,28 +102,36 @@ public class ServerJarret {
 		HTTPHeader header;
 		try {
 			header = reader.readHeader();
-			System.out.println(header.getFields());
 			String response = header.getResponse();
-			System.out.println(response);
 			if (response.contains("GET Task HTTP/1.1")) {
-				String job = tg.giveJobByPriority();
+				String job = null;
+				try {
+					job = taskGiver.giveJobByPriority();
+				} catch (JsonProcessingException jpe) {
+					System.err
+							.println("Error while giving task to the client !");
+					silentlyClose(client);
+					return;
+				}
 				ByteBuffer bb = generateAnswer(job);
-				// bb.flip();
 				key.attach(bb);
 				key.interestOps(SelectionKey.OP_WRITE);
 			} else if (response.contains("POST Answer HTTP/1.1")) {
 				ByteBuffer buff2 = reader.readBytes(header.getContentLength());
 				buff2.flip();
 				String content = UTF8_CHARSET.decode(buff2).toString();
-				System.out.println(content);
-				boolean validJson = TaskSavior.saveJob(content);
-				System.err.println(validJson);
+				System.out.println("Receiving new complete task");
+				boolean validJson = taskSavior.saveJob(content);
+				System.out.println("The new task is valid JSON ? " + validJson);
 				buff2.clear();
 
 				if (validJson) {
-					tg.taskGiven(content);
+					taskGiver.taskGiven(content);
+					System.out.println("Sending answer with code 200 OK\n\n");
 					buff2.put(ASCII_CHARSET.encode("HTTP/1.1 200 OK\r\n\r\n"));
 				} else {
+					System.out
+							.println("Sending answer with code 400 Bad Request cause of non valid JSON\n\n");
 					buff2.put(ASCII_CHARSET
 							.encode("HTTP/1.1 400 Bad Request\r\n\r\n"));
 				}
@@ -135,28 +146,6 @@ public class ServerJarret {
 
 		}
 
-	}
-
-	private void silentlyClose(SocketChannel client) {
-		try {
-			client.close();
-		} catch (IOException e1) {
-			// do Nothing
-		}
-	}
-
-	public boolean isValidJSON(final String json) {
-		boolean valid = true;
-		try {
-			ObjectMapper mapper = new ObjectMapper();
-			mapper.readTree(json);
-		} catch (JsonParseException jpe) {
-			valid = false;
-		} catch (IOException ioe) {
-			valid = false;
-		}
-
-		return valid;
 	}
 
 	private void doWrite(SelectionKey key) {
@@ -174,6 +163,14 @@ public class ServerJarret {
 		}
 	}
 
+	private void silentlyClose(SocketChannel client) {
+		try {
+			client.close();
+		} catch (IOException e1) {
+			// Do Nothing
+		}
+	}
+
 	private ByteBuffer generateAnswer(String job) throws HTTPException {
 		Map<String, String> fields = new HashMap<>();
 		String response = "HTTP/1.1 200 OK";
@@ -181,7 +178,6 @@ public class ServerJarret {
 		fields.put("Content-Length", String.valueOf(job.length()));
 		HTTPHeader headerAnswer = HTTPHeader.create(response, fields);
 		ByteBuffer buff = ByteBuffer.allocate(BUFFER_SIZE);
-		System.out.println(job);
 		buff.put(ASCII_CHARSET.encode(headerAnswer.toString()));
 		buff.put(UTF8_CHARSET.encode(job));
 		return buff;
@@ -203,24 +199,19 @@ public class ServerJarret {
 		serverSocketChannel.close();
 	}
 
-	private static void usage() {
-		System.out.println("ServerJarret <port>");
-
-	}
-
 	public static void main(String[] args) throws IOException,
 			InterruptedException {
-		if (args.length != 1) {
-			usage();
-			return;
-		}
-		ServerJarret serverJarret = new ServerJarret(Integer.parseInt(args[0]));
+
+		JarretConfigurator jConfigurator = JarretConfigurator.create();
+
+		ServerJarret serverJarret = new ServerJarret(jConfigurator.getPort(),
+				jConfigurator.getTimeToSleep(), jConfigurator.getPathJobs());
 
 		thread_server = new Thread(() -> {
 			try {
 				serverJarret.launch();
-			} catch (Exception e) {
-				e.printStackTrace();
+			} catch (IOException e) {
+				System.err.println("Cannot start server !");
 			}
 		});
 		thread_server.start();

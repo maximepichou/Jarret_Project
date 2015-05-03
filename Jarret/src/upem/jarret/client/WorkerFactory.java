@@ -33,7 +33,7 @@ public class WorkerFactory {
 				.currentThread().getContextClassLoader());
 		Class<? extends Object> theClass = Class.forName(className, true,
 				urlClassLoader);
-		System.out.println("Instanciation de la classe");
+		System.out.println("Loading class");
 		theClass.newInstance();
 		return (upem.jarret.worker.Worker) theClass.newInstance();
 

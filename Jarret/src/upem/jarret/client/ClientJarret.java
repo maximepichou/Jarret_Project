@@ -54,7 +54,7 @@ public class ClientJarret {
 		sc.write(buffer);
 		buffer.clear();
 	}
-	
+
 	private ByteBuffer createAnswerPacket(ClientTask cTask)
 			throws HTTPException {
 		Map<String, String> fields = new HashMap<>();
@@ -65,7 +65,6 @@ public class ClientJarret {
 		fields.put("Content-Length", String.valueOf(jsonAnswer.length()));
 		HTTPHeader postHeader = HTTPHeader.create(response, fields);
 		ByteBuffer buff = ByteBuffer.allocate(BUFFER_SIZE);
-		System.out.println(jsonAnswer);
 		buff.put(ASCII_CHARSET.encode(postHeader.toString()));
 		buff.put(UTF8_CHARSET.encode(jsonAnswer));
 		return buff;
@@ -81,27 +80,29 @@ public class ClientJarret {
 		String adress = args[1];
 		int port = Integer.valueOf(args[2]);
 
+		System.out.println("\n\nClient initialization "
+				+ "\nConnecting to the server " + adress + " on " + port + ".");
+		ClientJarret cJarret = new ClientJarret(clientID, adress, port);
+
 		while (true) {
-			System.out.println("Initialisation du client " + clientID
-					+ "\nConnexion au server " + adress + " sur le port "
-					+ port);
-			ClientJarret cJarret = new ClientJarret(clientID, adress, port);
-			System.out.println("Envoie du paquet de demande de tâche");
+			System.out.println("Asking for new task to the server.");
 			cJarret.sendPacket(cJarret.getRequestPacket());
-			System.out.println("Lecture de la réponse du serveur");
 			HTTPReader reader = new HTTPReader(cJarret.sc, cJarret.buff);
 			HTTPHeader header = reader.readHeader();
-			System.out.println(header.getFields());
 			int contentLength = header.getContentLength();
 			reader.readBytes(contentLength);
 			if (!"application/json".equals(header.getContentType())) {
-				throw new IllegalArgumentException("This is not JSON Content-Type");
+				throw new IllegalArgumentException(
+						"This is not JSON Content-Type");
 			}
-			String content = header.getCharset().decode(cJarret.buff).toString();
+			String content = header.getCharset().decode(cJarret.buff)
+					.toString();
 			ClientTask cTask = ClientTask.create(content);
 			int sleep;
 			if ((sleep = cTask.haveToSleep()) != 0) {
-				System.out.println("Mise en attente pendant : "+ cTask.haveToSleep());
+				System.out.println("No Task Available");
+				System.out.println("Retry in " + cTask.haveToSleep()
+						+ " seconds");
 				long timeSlept = System.currentTimeMillis();
 				while (System.currentTimeMillis() - timeSlept < sleep * 1000) {
 					try {
@@ -113,7 +114,11 @@ public class ClientJarret {
 				}
 				continue;
 			}
-
+			System.out.println("New Task available :\nTask " + cTask.getTask()
+					+ " of Job " + cTask.getJobId() + "\nWorkerURL : "
+					+ cTask.getWorkerURL() + "\nWorkerClassName : "
+					+ cTask.getWorkerClassName() + "\nWorkerClassVersion : "
+					+ cTask.getWorkerVersion());
 			try {
 				cTask.doWork();
 			} catch (ClassNotFoundException | IllegalAccessException
@@ -129,11 +134,10 @@ public class ClientJarret {
 			cJarret.buff.clear();
 			reader = new HTTPReader(cJarret.sc, cJarret.buff);
 			header = reader.readHeader();
-			System.err.println(header.getCode());
+			System.out.println("Server returns answer with code : "
+					+ header.getCode());
 		}
 
 	}
-
-	
 
 }

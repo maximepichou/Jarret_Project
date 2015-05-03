@@ -1,0 +1,6 @@
+{
+	"Port" : 7777,
+	"PathJobs" : "jobs/",
+	"MaxSizeAnwser" : 4096,
+	"TimeToSleep" : 10
+}

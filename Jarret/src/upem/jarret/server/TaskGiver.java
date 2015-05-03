@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,10 +19,13 @@ import com.fasterxml.jackson.databind.introspect.VisibilityChecker;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class TaskGiver {
-	private final ArrayList<Task> tasks;
+	private static final String taskLocation = "workerdescription.json";
+	private final ArrayList<ServerTask> tasks;
+	private final int comeBackInSeconds;
 
-	public TaskGiver(List<Task> tasks) {
-		this.tasks = (ArrayList<Task>) Objects.requireNonNull(tasks);
+	public TaskGiver(List<ServerTask> tasks, int comeBackInSeconds) {
+		this.tasks = (ArrayList<ServerTask>) Objects.requireNonNull(tasks);
+		this.comeBackInSeconds = comeBackInSeconds;
 	}
 
 	private static ArrayList<String> parseJsonData(String path)
@@ -48,8 +52,8 @@ public class TaskGiver {
 		return strings;
 	}
 
-	public static TaskGiver create() throws IOException {
-		ArrayList<String> strings = parseJsonData("workerdescription.json");
+	public static TaskGiver create(int comeBackInSeconds) throws IOException {
+		ArrayList<String> strings = parseJsonData(taskLocation);
 
 		// create ObjectMapper instance
 		ObjectMapper objectMapper = new ObjectMapper();
@@ -57,17 +61,17 @@ public class TaskGiver {
 		objectMapper.setVisibilityChecker(VisibilityChecker.Std
 				.defaultInstance().withFieldVisibility(
 						JsonAutoDetect.Visibility.ANY));
-		ArrayList<Task> jDatas = new ArrayList<Task>();
+		ArrayList<ServerTask> jDatas = new ArrayList<ServerTask>();
 		// convert json string to object
 		for (String s : strings) {
-			jDatas.add(objectMapper.readValue(s, Task.class));
+			jDatas.add(objectMapper.readValue(s, ServerTask.class));
 		}
-		jDatas.stream().forEach(jd -> System.out.println(jd + "\n"));
-		return new TaskGiver(jDatas);
+		System.out.println("Loading all task from " + taskLocation);
+		return new TaskGiver(jDatas, comeBackInSeconds);
 	}
 
-	public String giveJobByPriority() {
-		Task t = tasks.stream().max((Task t1, Task t2) -> {
+	public String giveJobByPriority() throws JsonProcessingException {
+		ServerTask t = tasks.stream().max((ServerTask t1, ServerTask t2) -> {
 			if (t1.taskGiven() && !t2.taskGiven()) {
 				return -1;
 			} else if (!t1.taskGiven() && t2.taskGiven()) {
@@ -80,29 +84,30 @@ public class TaskGiver {
 
 		// If all tasks has given
 		if (t.taskGiven()) {
+			System.out.println("No more task are available");
 			ObjectMapper mapper = new ObjectMapper();
 			ObjectNode dataTable = mapper.createObjectNode();
-			dataTable.put("ComeBackInSeconds", 5);
-			return dataTable.toString();
+			dataTable.put("ComeBackInSeconds", comeBackInSeconds);
+			return mapper.writeValueAsString(dataTable);
 		}
+		System.out.println("Find task " + t.getJobTaskNumber() + " of job "  + t.getJobId() + " for the client");
 		return t.convertToJsonString();
 	}
-	
-	public void taskGiven(String content){
+
+	public void taskGiven(String content) {
 		ObjectMapper objectMapper = new ObjectMapper();
 		objectMapper.configure(SerializationFeature.INDENT_OUTPUT, true);
 		try {
 			JsonNode dataTable = objectMapper.readTree(content);
 			String jobId = dataTable.get("JobId").textValue();
 			String task = dataTable.get("Task").textValue();
-			for(Task t : tasks){
-				if(t.getJobId().equals(jobId) && t.getJobTaskNumber().equals(task)){
-					System.out.println("Job : "+t.getJobId() + " task : " + t.getJobTaskNumber() + " given !!!!!");
+			for (ServerTask t : tasks) {
+				if (t.getJobId().equals(jobId)
+						&& t.getJobTaskNumber().equals(task)) {
 					t.setTaskGiven();
 				}
 			}
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
