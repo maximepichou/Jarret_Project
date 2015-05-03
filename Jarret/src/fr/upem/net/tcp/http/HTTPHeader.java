@@ -3,8 +3,7 @@ package fr.upem.net.tcp.http;
 import java.nio.charset.Charset;
 import java.util.*;
 
-import upem.jarret.client.HTTPException;
-import static upem.jarret.client.HTTPException.ensure;
+import static fr.upem.net.tcp.http.HTTPException.ensure;
 
 /**
  * @author carayol Class representing a HTTP header

@@ -9,6 +9,7 @@ import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
 
+import fr.upem.net.tcp.http.HTTPException;
 import fr.upem.net.tcp.http.HTTPHeader;
 import fr.upem.net.tcp.http.HTTPReader;
 
@@ -91,8 +92,13 @@ public class ClientJarret {
 			HTTPReader reader = new HTTPReader(cJarret.sc, cJarret.buff);
 			HTTPHeader header = reader.readHeader();
 			System.out.println(header.getFields());
-			reader.readBytes(header.getContentLength());
-			ClientTask cTask = ClientTask.create(cJarret.buff, header);
+			int contentLength = header.getContentLength();
+			reader.readBytes(contentLength);
+			if (!"application/json".equals(header.getContentType())) {
+				throw new IllegalArgumentException("This is not JSON Content-Type");
+			}
+			String content = header.getCharset().decode(cJarret.buff).toString();
+			ClientTask cTask = ClientTask.create(content);
 			int sleep;
 			if ((sleep = cTask.haveToSleep()) != 0) {
 				System.out.println("Mise en attente pendant : "+ cTask.haveToSleep());

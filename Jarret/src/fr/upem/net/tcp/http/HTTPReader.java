@@ -7,8 +7,6 @@ import java.nio.channels.SocketChannel;
 import java.nio.charset.Charset;
 import java.util.HashMap;
 
-import upem.jarret.client.HTTPException;
-
 public class HTTPReader {
 
 	private final Charset ASCII_CHARSET = Charset.forName("ASCII");

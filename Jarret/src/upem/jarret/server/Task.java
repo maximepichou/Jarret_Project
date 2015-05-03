@@ -16,6 +16,15 @@ public class Task {
 	private String WorkerClassName;
 	private boolean given = false;
 	
+	
+	public String getJobId(){
+		return JobId;
+	}
+	
+	public String getJobTaskNumber(){
+		return JobTaskNumber;
+	}
+	
 	public int getPriority(){
 		return Integer.valueOf(JobPriority);
 	}

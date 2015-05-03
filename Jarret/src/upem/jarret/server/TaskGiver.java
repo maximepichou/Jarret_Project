@@ -11,7 +11,9 @@ import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.introspect.VisibilityChecker;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -67,9 +69,9 @@ public class TaskGiver {
 	public String giveJobByPriority() {
 		Task t = tasks.stream().max((Task t1, Task t2) -> {
 			if (t1.taskGiven() && !t2.taskGiven()) {
-				return 1;
-			} else if (!t1.taskGiven() && t2.taskGiven()) {
 				return -1;
+			} else if (!t1.taskGiven() && t2.taskGiven()) {
+				return 1;
 			} else if (t1.getPriority() > t2.getPriority()) {
 				return 1;
 			} else
@@ -80,10 +82,29 @@ public class TaskGiver {
 		if (t.taskGiven()) {
 			ObjectMapper mapper = new ObjectMapper();
 			ObjectNode dataTable = mapper.createObjectNode();
-			dataTable.put("ComeBackInSeconds", 300);
+			dataTable.put("ComeBackInSeconds", 5);
 			return dataTable.toString();
 		}
 		return t.convertToJsonString();
+	}
+	
+	public void taskGiven(String content){
+		ObjectMapper objectMapper = new ObjectMapper();
+		objectMapper.configure(SerializationFeature.INDENT_OUTPUT, true);
+		try {
+			JsonNode dataTable = objectMapper.readTree(content);
+			String jobId = dataTable.get("JobId").textValue();
+			String task = dataTable.get("Task").textValue();
+			for(Task t : tasks){
+				if(t.getJobId().equals(jobId) && t.getJobTaskNumber().equals(task)){
+					System.out.println("Job : "+t.getJobId() + " task : " + t.getJobTaskNumber() + " given !!!!!");
+					t.setTaskGiven();
+				}
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 }
