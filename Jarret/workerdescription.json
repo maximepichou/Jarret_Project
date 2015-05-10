@@ -50,9 +50,9 @@
 
 {
  "JobId" :  "5001"  ,
- "JobTaskNumber" : "10",
+ "JobTaskNumber" : "737",
  "JobDescription" : "Test permutations of size 5",
- "JobPriority" : "2",
+ "JobPriority" : "1",
  "WorkerVersionNumber" : "1.1"  ,
  "WorkerURL" :  "http://igm.univ-mlv.fr/~carayol/WorkerNicaudFiveV11.jar",
  "WorkerClassName" : "upem.workernicaud.ComputationFiveV11"
@@ -180,9 +180,9 @@
 
 {
  "JobId" :  "7001"  ,
- "JobTaskNumber" : "12",
+ "JobTaskNumber" : "1333524",
  "JobDescription" : "Test permutations of size 7",
- "JobPriority" : "1",
+ "JobPriority" : "4",
  "WorkerVersionNumber" : "1"  ,
  "WorkerURL" :  "http://igm.univ-mlv.fr/~carayol/WorkerNicaudSevenV1.jar",
  "WorkerClassName" : "upem.workernicaud.ComputationSevenV1"

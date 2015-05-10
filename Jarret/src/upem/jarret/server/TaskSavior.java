@@ -7,14 +7,21 @@ import java.util.Objects;
 
 import upem.jarret.client.ClientTask;
 
-public class TaskSavior {
+import com.esotericsoftware.minlog.Log;
 
+public class TaskSavior {
 	private final String pathJobs;
 
 	public TaskSavior(String pathJobs) {
 		this.pathJobs = Objects.requireNonNull(pathJobs);
 	}
 
+	/**
+	 * Save a complete task into a file.
+	 * @param job Task to save.
+	 * @return true if the job has been saved, false otherwise.
+	 * @throws IOException
+	 */
 	public boolean saveJob(String job) throws IOException {
 		ClientTask cTask = ClientTask.create(job);
 		if (!cTask.isValidJSON(job)) {
@@ -54,7 +61,7 @@ public class TaskSavior {
 				fos.write(byteArray);
 			}
 		}
-		System.out.println("Task " + cTask.getTask() + " saved on file " + fileName );
+		Log.info(cTask.getTask() + " saved on file " + fileName);
 		return true;
 	}
 

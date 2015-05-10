@@ -1,5 +1,6 @@
 package upem.jarret.server;
 
+import com.esotericsoftware.minlog.Log;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -14,7 +15,6 @@ public class ServerTask {
 	private String WorkerVersionNumber;
 	private String WorkerURL;
 	private String WorkerClassName;
-	private boolean given = false;
 	
 	
 	public String getJobId(){
@@ -29,14 +29,18 @@ public class ServerTask {
 		return Integer.valueOf(JobPriority);
 	}
 	
-	public boolean taskGiven(){
-		return given;
+	public void decreasePriority(){
+		int jobPriority = Integer.valueOf(JobPriority);
+		if(jobPriority > 0){
+			jobPriority --;
+			JobPriority = String.valueOf(jobPriority);
+		}
 	}
 	
-	public void setTaskGiven(){
-		given = true;
-	}
-
+	/**
+	 * Convert a ServerTask object into a JSON String object and return it.
+	 * @return a JSON string.
+	 */
 	public String convertToJsonString()  {
 		ObjectMapper mapper = new ObjectMapper();
 		mapper.configure(SerializationFeature.INDENT_OUTPUT, true);
@@ -50,7 +54,7 @@ public class ServerTask {
 		try {
 			result = mapper.writeValueAsString(dataTable);
 		} catch (JsonProcessingException e1) {
-			e1.printStackTrace();
+			Log.error("", e1);
 		}
 		
 		return result;
@@ -66,8 +70,7 @@ public class ServerTask {
 	sb.append("\"JobPriority\" : \""+JobPriority+"\",\n");
 	sb.append("\"WorkerVersionNumber\" : \""+WorkerVersionNumber+"\",\n");
 	sb.append("\"WorkerURL\" : \""+WorkerURL+"\",\n");
-	sb.append("\"WorkerClassName\" : \""+WorkerClassName+"\",\n");
-	sb.append("\"given\" : \""+given+"\",\n");
+	sb.append("\"WorkerClassName\" : \""+WorkerClassName+"\"\n");
 	return sb.toString();
 	}
 }

@@ -14,6 +14,7 @@ public class JarretConfigurator {
 	private String PathJobs;
 	private int MaxSizeAnwser;
 	private int TimeToSleep;
+	private String PathLogs;
 	
 	public int getPort() {
 		return Port;
@@ -29,6 +30,10 @@ public class JarretConfigurator {
 
 	public int getTimeToSleep() {
 		return TimeToSleep;
+	}
+	
+	public String getPathLogs() {
+		return PathLogs;
 	}
 
 	public static JarretConfigurator create(){

@@ -9,13 +9,13 @@ import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.esotericsoftware.minlog.Log;
+
+import fr.upem.logger.MyLogger;
 import fr.upem.net.tcp.http.HTTPException;
 import fr.upem.net.tcp.http.HTTPHeader;
 import fr.upem.net.tcp.http.HTTPReader;
 
-//http://www.journaldev.com/2324/jackson-json-processing-api-in-java-example-tutorial
-//http://repo1.maven.org/maven2/com/fasterxml/jackson/
-//http://docs.oracle.com/javase/7/docs/api/java/net/URLClassLoader.html#URLClassLoader(java.net.URL[],%20java.lang.ClassLoader)
 public class ClientJarret {
 	private final String clientId;
 	private InetSocketAddress serverAddress;
@@ -36,9 +36,12 @@ public class ClientJarret {
 
 	private static void usage() {
 		System.out.println("ClientJarret clientID Adress Port");
-
 	}
 
+	/**
+	 * Write into a buffer a request to the server to get new Task.
+	 * @return the buffer that contains a request to the server.
+	 */
 	public ByteBuffer getRequestPacket() {
 		buff = ByteBuffer.allocate(BUFFER_SIZE);
 		// String request2 = "GET / HTTP/1.1\r\n" + "Host: www.w3.org\r\n" +
@@ -49,12 +52,23 @@ public class ClientJarret {
 		return buff;
 	}
 
+	/**
+	 * Send a packet to the server.
+	 * @param buffer the ByteBuffer to send.
+	 * @throws IOException
+	 */
 	public void sendPacket(ByteBuffer buffer) throws IOException {
 		buffer.flip();
 		sc.write(buffer);
 		buffer.clear();
 	}
 
+	/**
+	 * Create a buffer that contains the answer of the task given to the client.
+	 * @param cTask the task complete.
+	 * @return ByteBuffer that contains the answer to the server.
+	 * @throws HTTPException
+	 */
 	private ByteBuffer createAnswerPacket(ClientTask cTask)
 			throws HTTPException {
 		Map<String, String> fields = new HashMap<>();
@@ -76,16 +90,17 @@ public class ClientJarret {
 			usage();
 			return;
 		}
+		
 		String clientID = args[0];
 		String adress = args[1];
 		int port = Integer.valueOf(args[2]);
-
-		System.out.println("\n\nClient initialization "
-				+ "\nConnecting to the server " + adress + " on " + port + ".");
+		Log.setLogger(new MyLogger("Client_Log"));
+		Log.info("Client initialization ");
+		Log.info("Connecting to the server " + adress + " on " + port);
 		ClientJarret cJarret = new ClientJarret(clientID, adress, port);
 
 		while (true) {
-			System.out.println("Asking for new task to the server.");
+			Log.info("Asking for new task to the server.");
 			cJarret.sendPacket(cJarret.getRequestPacket());
 			HTTPReader reader = new HTTPReader(cJarret.sc, cJarret.buff);
 			HTTPHeader header = reader.readHeader();
@@ -100,8 +115,8 @@ public class ClientJarret {
 			ClientTask cTask = ClientTask.create(content);
 			int sleep;
 			if ((sleep = cTask.haveToSleep()) != 0) {
-				System.out.println("No Task Available");
-				System.out.println("Retry in " + cTask.haveToSleep()
+				Log.warn("No Task Available");
+				Log.warn("Retry in " + cTask.haveToSleep()
 						+ " seconds");
 				long timeSlept = System.currentTimeMillis();
 				while (System.currentTimeMillis() - timeSlept < sleep * 1000) {
@@ -114,27 +129,22 @@ public class ClientJarret {
 				}
 				continue;
 			}
-			System.out.println("New Task available :\nTask " + cTask.getTask()
-					+ " of Job " + cTask.getJobId() + "\nWorkerURL : "
-					+ cTask.getWorkerURL() + "\nWorkerClassName : "
-					+ cTask.getWorkerClassName() + "\nWorkerClassVersion : "
-					+ cTask.getWorkerVersion());
+			Log.info("New Task available : " +cTask.toString());
 			try {
 				cTask.doWork();
 			} catch (ClassNotFoundException | IllegalAccessException
 					| InstantiationException e) {
-				System.err.println("Error while loading URL class");
-				e.printStackTrace();
+				Log.error("Error while loading URL class",e);
 			} catch (InvocationTargetException e) {
-				e.printStackTrace();
+				Log.error("",e);
 			}
-			System.out.println("Sending Packet Answer");
+			Log.info("Sending Packet Answer");
 			ByteBuffer buff = cJarret.createAnswerPacket(cTask);
 			cJarret.sendPacket(buff);
 			cJarret.buff.clear();
 			reader = new HTTPReader(cJarret.sc, cJarret.buff);
 			header = reader.readHeader();
-			System.out.println("Server returns answer with code : "
+			Log.info("Server returns answer with code : "
 					+ header.getCode());
 		}
 

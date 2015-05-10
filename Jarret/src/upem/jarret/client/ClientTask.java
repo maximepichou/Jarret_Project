@@ -7,6 +7,7 @@ import java.util.Iterator;
 
 import upem.jarret.worker.Worker;
 
+import com.esotericsoftware.minlog.Log;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -67,6 +68,12 @@ public class ClientTask {
 		return ComeBackInSeconds;
 	}
 
+	/**
+	 * Create a new ClientTask that contains the task to solve.
+	 * @param content JSON string that describe the task to solve.
+	 * @return new ClientTask.
+	 * @throws IOException
+	 */
 	public static ClientTask create(String content) throws IOException {
 		// create ObjectMapper instance
 		ObjectMapper objectMapper = new ObjectMapper();
@@ -78,6 +85,11 @@ public class ClientTask {
 		return ct;
 	}
 
+	/**
+	 * Check if the JSON String is a valid JSON.
+	 * @param JSON String to check if it valid JSON.
+	 * @return true if it valid, false otherwise.
+	 */
 	public boolean isValidJSON(final String json) {
 		boolean valid = true;
 		try {
@@ -92,6 +104,11 @@ public class ClientTask {
 		return valid;
 	}
 
+	/**
+	 * Check if the JSON String contains an Object JSON.
+	 * @param json JSON String to check.
+	 * @return true if it contains, false otherwise.
+	 */
 	public boolean isJSONContainsObject(String json) {
 		JsonNode arrNode;
 		try {
@@ -106,28 +123,39 @@ public class ClientTask {
 			}
 
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			return false;
 		}
 		return false;
 	}
 
+	/**
+	 * Compute the task with the worker.
+	 * @throws InvocationTargetException
+	 * @throws MalformedURLException
+	 * @throws ClassNotFoundException
+	 * @throws IllegalAccessException
+	 * @throws InstantiationException
+	 */
 	public void doWork() throws InvocationTargetException,
 			MalformedURLException, ClassNotFoundException,
 			IllegalAccessException, InstantiationException {
+		Log.info("Loading Class ...");
 		Worker worker = WorkerFactory.getWorker(WorkerURL, WorkerClassName);
-		System.out.println("Working in progress ...");
+		Log.info("Working in progress ...");
 		try {
 			ObjectMapper mapper = new ObjectMapper();
 			Answer = mapper.readTree(worker.compute(Integer.valueOf(Task)));
 			checkAnswer();
 		} catch (Exception e) {
 			Error = "Computation error";
-			System.err.println("Error while computing");
+			Log.warn("Error while computing");
 		}
-		System.out.println("Task is over");
+		Log.info("Task is over");
 	}
 
+	/**
+	 * Check if the answer is valid or contains error.
+	 */
 	public void checkAnswer() {
 		if (!isValidJSON(Answer.toString())) {
 			Error = "Answer is not valid JSON";
@@ -138,6 +166,11 @@ public class ClientTask {
 		}
 	}
 
+	/**
+	 * Convert ClientTask object into JSON String.
+	 * @param clientId the id of the client.
+	 * @return JSON String of a ClientTask.
+	 */
 	public String convertToJsonString(String clientId) {
 		ObjectMapper mapper = new ObjectMapper();
 		mapper.configure(SerializationFeature.INDENT_OUTPUT, true);
@@ -158,7 +191,7 @@ public class ClientTask {
 			}
 			result = mapper.writeValueAsString(dataTable);
 		} catch (IOException e) {
-			e.printStackTrace();
+			Log.error("", e);
 		}
 		return result;
 	}
@@ -166,14 +199,8 @@ public class ClientTask {
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
-		sb.append("{\n");
-		sb.append("\"JobId\" : \"" + JobId + "\",\n");
-		sb.append("\"WorkerVersion\" : \"" + WorkerVersion + "\",\n");
-		sb.append("\"WorkerURL\" : \"" + WorkerURL + "\",\n");
-		sb.append("\"WorkerClassName\" : \"" + WorkerClassName + "\",\n");
-		sb.append("\"Task\" : \"" + Task + "\",\n");
-		sb.append("\"Answer\" : \"" + Answer + "\"\n");
-		sb.append("}");
+		sb.append("Task " + Task + " of Job ");
+		sb.append(" JobId " + JobId );
 		return sb.toString();
 	}
 

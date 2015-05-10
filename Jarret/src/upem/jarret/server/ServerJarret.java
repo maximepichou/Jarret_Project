@@ -13,14 +13,16 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
 
+import com.esotericsoftware.minlog.Log;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
+import fr.upem.logger.MyLogger;
 import fr.upem.net.tcp.http.HTTPException;
 import fr.upem.net.tcp.http.HTTPHeader;
 import fr.upem.net.tcp.http.HTTPReader;
 
 public class ServerJarret {
-
+	
 	private final ServerSocketChannel serverSocketChannel;
 	private final Selector selector;
 	private final Set<SelectionKey> selectedKeys;
@@ -33,8 +35,10 @@ public class ServerJarret {
 	private final Charset ASCII_CHARSET = Charset.forName("ASCII");
 	private final Charset UTF8_CHARSET = Charset.forName("UTF-8");
 
-	public ServerJarret(int port, int comeBackInSeconds, String pathJobs)
+	public ServerJarret(int port, int comeBackInSeconds, String pathJobs, String pathLogs)
 			throws IOException {
+		Log.setLogger(new MyLogger(pathLogs));
+		Log.TRACE();
 		serverSocketChannel = ServerSocketChannel.open();
 		serverSocketChannel.bind(new InetSocketAddress(port));
 		selector = Selector.open();
@@ -42,12 +46,17 @@ public class ServerJarret {
 		taskGiver = TaskGiver.create(comeBackInSeconds);
 		taskSavior = new TaskSavior(pathJobs);
 	}
-
+	
+	
+	/**
+	 * Start the server on non-blocking mode.
+	 * @throws IOException
+	 */
 	public void launch() throws IOException {
 		serverSocketChannel.configureBlocking(false);
 		serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
 		Set<SelectionKey> selectedKeys = selector.selectedKeys();
-		System.out.println("Server started");
+		Log.info("Server started");
 		Object monitor = new Object();
 		while (!Thread.interrupted()) {
 			synchronized (monitor) {
@@ -64,11 +73,18 @@ public class ServerJarret {
 			selectedKeys.clear();
 		}
 	}
-
-	private void processSelectedKeys() throws IOException {
+	
+	/**
+	 * Compute selected keys.
+	 */
+	private void processSelectedKeys(){
 		for (SelectionKey key : selectedKeys) {
 			if (key.isValid() && key.isAcceptable()) {
+				try{
 				doAccept(key);
+				}catch(IOException e){
+					//Do nothing
+				}
 			}
 			if (key.isValid() && key.isWritable()) {
 				doWrite(key);
@@ -78,14 +94,19 @@ public class ServerJarret {
 			}
 		}
 	}
-
+	
+	/**
+	 * Accept new client.
+	 * @param key - the future client key.
+	 * @throws IOException - if I/O error occurs.
+	 */
 	private void doAccept(SelectionKey key) throws IOException {
 		SocketChannel sc;
 		try {
 			sc = serverSocketChannel.accept();
-			System.out.println("\n\nNew client accepted");
+			Log.info("New client accepted");
 		} catch (IOException e) {
-			System.err.println("Can't accept Client");
+			Log.warn("Can't accept Client");
 			return;
 		}
 		if (sc == null)
@@ -95,6 +116,10 @@ public class ServerJarret {
 
 	}
 
+	/**
+	 * Read the client and prepare answer for the client.
+	 * @param key - The key that contains the channel to read.
+	 */
 	private void doRead(SelectionKey key) {
 		SocketChannel client = (SocketChannel) key.channel();
 		ByteBuffer buff = ByteBuffer.allocate(5);
@@ -108,8 +133,7 @@ public class ServerJarret {
 				try {
 					job = taskGiver.giveJobByPriority();
 				} catch (JsonProcessingException jpe) {
-					System.err
-							.println("Error while giving task to the client !");
+					Log.error("Error while giving task to the client !");
 					silentlyClose(client);
 					return;
 				}
@@ -120,18 +144,16 @@ public class ServerJarret {
 				ByteBuffer buff2 = reader.readBytes(header.getContentLength());
 				buff2.flip();
 				String content = UTF8_CHARSET.decode(buff2).toString();
-				System.out.println("Receiving new complete task");
+				Log.info("Receiving new complete task");
 				boolean validJson = taskSavior.saveJob(content);
-				System.out.println("The new task is valid JSON ? " + validJson);
+				Log.info("The new task is valid JSON ? " + validJson);
 				buff2.clear();
 
 				if (validJson) {
-					taskGiver.taskGiven(content);
-					System.out.println("Sending answer with code 200 OK\n\n");
+					Log.info("Sending answer with code 200 OK\n\n");
 					buff2.put(ASCII_CHARSET.encode("HTTP/1.1 200 OK\r\n\r\n"));
 				} else {
-					System.out
-							.println("Sending answer with code 400 Bad Request cause of non valid JSON\n\n");
+					Log.info("Sending answer with code 400 Bad Request cause of non valid JSON\n\n");
 					buff2.put(ASCII_CHARSET
 							.encode("HTTP/1.1 400 Bad Request\r\n\r\n"));
 				}
@@ -140,14 +162,17 @@ public class ServerJarret {
 
 			}
 		} catch (IOException e) {
-			// e.printStackTrace();
-			System.err.println("Can't read from the client");
+			Log.error("Can't read from the client");
 			silentlyClose(client);
 
 		}
 
 	}
 
+	/**
+	 * Write an answer to the client.
+	 * @param key - The key of the client to write to him.
+	 */
 	private void doWrite(SelectionKey key) {
 		SocketChannel client = (SocketChannel) key.channel();
 		ByteBuffer bb = (ByteBuffer) key.attachment();
@@ -159,18 +184,28 @@ public class ServerJarret {
 				key.interestOps(SelectionKey.OP_READ);
 			}
 		} catch (IOException e) {
-			System.err.println("Can't write to the client");
+			Log.error("Can't write to the client");
 		}
 	}
-
+	
+	/**
+	 * Close the connection with the client if an error occurs.
+	 * @param client - SocketChannel to close.
+	 */
 	private void silentlyClose(SocketChannel client) {
 		try {
 			client.close();
-		} catch (IOException e1) {
+		} catch (IOException e) {
 			// Do Nothing
 		}
 	}
 
+	/**
+	 * Write into a buffer the answer for the client with HTTP Header and the job to solve.
+	 * @param job - String of the job in JSON format that the client have to solve.
+	 * @return ByteBuffer of the answer to send to the client.
+	 * @throws HTTPException
+	 */
 	private ByteBuffer generateAnswer(String job) throws HTTPException {
 		Map<String, String> fields = new HashMap<>();
 		String response = "HTTP/1.1 200 OK";
@@ -183,7 +218,12 @@ public class ServerJarret {
 		return buff;
 
 	}
-
+	
+	/**
+	 * Stop new connection with client and shutdown server when all clients disconnected.
+	 * @throws InterruptedException
+	 * @throws IOException
+	 */
 	private void shutdown() throws InterruptedException, IOException {
 		is_shutdown = true;
 		synchronized (thread_server) {
@@ -194,9 +234,21 @@ public class ServerJarret {
 		}
 	}
 
+	/**
+	 * Close immediately all connections with clients and shutdown the server.
+	 * @throws IOException
+	 */
 	private void shutdownNow() throws IOException {
 		thread_server.interrupt();
 		serverSocketChannel.close();
+	}
+	
+	/**
+	 * Display information about the server.
+	 */
+	private void info(){
+		Log.info(" There is " + (selector.keys().size()-1) + " client(s) connected");
+		taskGiver.info();
 	}
 
 	public static void main(String[] args) throws IOException,
@@ -205,13 +257,13 @@ public class ServerJarret {
 		JarretConfigurator jConfigurator = JarretConfigurator.create();
 
 		ServerJarret serverJarret = new ServerJarret(jConfigurator.getPort(),
-				jConfigurator.getTimeToSleep(), jConfigurator.getPathJobs());
+				jConfigurator.getTimeToSleep(), jConfigurator.getPathJobs(), jConfigurator.getPathLogs());
 
 		thread_server = new Thread(() -> {
 			try {
 				serverJarret.launch();
 			} catch (IOException e) {
-				System.err.println("Cannot start server !");
+				Log.error("Cannot start server !");
 			}
 		});
 		thread_server.start();
@@ -219,18 +271,21 @@ public class ServerJarret {
 		try (Scanner scan = new Scanner(System.in)) {
 			while (scan.hasNextLine()) {
 				String line = scan.nextLine();
-				if (line.toLowerCase().equals("shutdown")) {
-					System.out.println("Server is shuting down !");
+				if (line.equals("SHUTDOWN")) {
+					Log.warn("Server is shuting down !");
 					serverJarret.shutdown();
-					System.out.println("Server stopped");
+					Log.warn("Server stopped");
 					return;
 
 				}
-				if (line.toLowerCase().equals("shutdown now")) {
-					System.out.println("Server is shuting down Now !");
+				if (line.equals("SHUTDOWN NOW")) {
+					Log.warn("Server is shuting down Now !");
 					serverJarret.shutdownNow();
-					System.out.println("Server stopped");
+					Log.warn("Server stopped");
 					return;
+				}
+				if (line.equals("INFO")) {
+					serverJarret.info();
 				}
 			}
 		}
